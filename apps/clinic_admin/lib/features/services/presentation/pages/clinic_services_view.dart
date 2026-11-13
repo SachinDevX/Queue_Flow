@@ -1,0 +1,117 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:queueflow_ui/queueflow_ui.dart';
+
+import '../../../../core/widgets/app_snack_bar.dart';
+import '../../data/repositories/clinic_services_repository_impl.dart';
+import '../../domain/entities/clinic_service_entity.dart';
+import '../../domain/usecases/delete_clinic_service_usecase.dart';
+import '../../domain/usecases/get_clinic_services_usecase.dart';
+import '../../domain/usecases/save_clinic_service_usecase.dart';
+import '../../domain/usecases/toggle_service_status_usecase.dart';
+import '../bloc/clinic_services_bloc.dart';
+import '../bloc/clinic_services_event.dart';
+import '../bloc/clinic_services_state.dart';
+import '../widgets/service_capacity_quota_card.dart';
+import '../widgets/service_delete_dialog.dart';
+import '../widgets/service_edit_dialog.dart';
+import '../widgets/services_cards_grid.dart';
+import '../widgets/services_catalog_section_header.dart';
+import '../widgets/services_view_header.dart';
+
+class ClinicServicesView extends StatelessWidget {
+  const ClinicServicesView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = ClinicServicesRepositoryImpl();
+    return BlocProvider(
+      create: (_) => ClinicServicesBloc(
+        getServicesUseCase: GetClinicServicesUseCase(repo),
+        saveServiceUseCase: SaveClinicServiceUseCase(repo),
+        toggleServiceStatusUseCase: ToggleServiceStatusUseCase(repo),
+        deleteServiceUseCase: DeleteClinicServiceUseCase(repo),
+        repository: repo,
+      )..add(const ServicesSubscriptionRequested()),
+      child: const _ClinicServicesBody(),
+    );
+  }
+}
+
+class _ClinicServicesBody extends StatelessWidget {
+  const _ClinicServicesBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocConsumer<ClinicServicesBloc, ClinicServicesState>(
+      listener: (context, state) {
+        if (state.toastMessage != null) {
+          if (state.isErrorToast) {
+            AppSnackBar.showError(context, message: state.toastMessage!);
+          } else {
+            AppSnackBar.showSuccess(context, message: state.toastMessage!);
+          }
+          context.read<ClinicServicesBloc>().add(const ServicesClearToast());
+        }
+      },
+      builder: (context, state) {
+        final bloc = context.read<ClinicServicesBloc>();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ServicesViewHeader(
+              planPill: state.plan.planPill,
+              planName: state.plan.planName,
+            ),
+            const SizedBox(height: 18),
+            ServiceCapacityQuotaCard(currentCount: state.services.length),
+            const SizedBox(height: 22),
+            ServicesCatalogSectionHeader(count: state.services.length),
+            const SizedBox(height: 14),
+            if (state.status == ServicesStatus.initial ||
+                state.status == ServicesStatus.loading)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 48),
+                child: Center(
+                  child: CircularProgressIndicator(color: context.colors.primary),
+                ),
+              )
+            else
+              ServicesCardsGrid(
+                services: state.services,
+                onEdit: (s) => _openServiceModal(context, state, s),
+                onToggle: (s) =>
+                    bloc.add(ServiceStatusTogglePressed(s.id, s.status)),
+                onDelete: (s) => ServiceDeleteDialog.show(
+                  context,
+                  serviceName: s.name,
+                  onConfirm: () => bloc.add(ServiceDeletePressed(s.id)),
+                ),
+                onAdd: () => _openServiceModal(context, state, null),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openServiceModal(  
+    BuildContext context,
+    ClinicServicesState state,
+    ClinicServiceEntity? service,
+  ) async {
+    final repo = ClinicServicesRepositoryImpl();
+    final freshDoctors = await repo.getDoctors().catchError((_) => state.doctors);
+    if (!context.mounted) return;
+
+    ServiceEditDialog.show(
+      context,
+      service: service,
+      departments: state.departments,
+      doctors: freshDoctors.isNotEmpty ? freshDoctors : state.doctors,
+      onSave: (svc) =>
+          context.read<ClinicServicesBloc>().add(ServiceSaveSubmitted(svc)),
+    );
+  }
+}

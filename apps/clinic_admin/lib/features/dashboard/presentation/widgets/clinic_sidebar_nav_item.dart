@@ -1,0 +1,85 @@
+﻿import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:queueflow_ui/queueflow_ui.dart';
+
+/// A single navigation item inside the clinic sidebar.
+/// Shows an active gradient background when selected.
+class ClinicSidebarNavItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+  final bool compact;
+
+  const ClinicSidebarNavItem({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    final item = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 0 : 16,
+          vertical: 11,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: isActive
+              ? const LinearGradient(
+                  colors: [Color(0xFF0284C7), Color(0xFF00D2FF)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : null,
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: compact
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isActive ? Colors.white : colors.textMuted,
+            ),
+            if (!compact) ...[
+              const SizedBox(width: 14),
+              Flexible(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                    color: isActive ? Colors.white : colors.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return compact ? Tooltip(message: title, child: item) : item;
+  }
+}
