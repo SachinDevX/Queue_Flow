@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 # 🏥 QueueFlow
@@ -440,3 +441,7 @@ Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 Built with ❤️ using **Flutter & Firebase**
 
 </div>
+=======
+# Queue_Flow
+Skip button added to enter as the guest user
+>>>>>>> 453a93ee0679340a393dc876bdfb3aa83156b517
